@@ -37,7 +37,7 @@ struct std::formatter<Container, CharT>
   CharT close_bracket = static_cast<CharT>(']');
 
   // delimiter to use
-  basic_string_view<CharT> delimiter = ", ";
+  std::basic_string_view<CharT> delimiter = ", ";
 
   // maximum number of element to show
   std::size_t max_show = 3;

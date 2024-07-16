@@ -26,7 +26,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "utility.h"
 #include <QComboBox>
 #include <QRadioButton>
+#include <QMessageBox>
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 namespace MOBase
 {
@@ -67,8 +70,12 @@ void reportError(const QString& message)
       criticalOnTop(message);
     }
   } else {
+#ifdef _WIN32
     ::MessageBoxW(0, message.toStdWString().c_str(),
                   QObject::tr("Error").toStdWString().c_str(), MB_ICONERROR | MB_OK);
+#else
+  log::error("could not show error dialog");
+#endif
   }
 }
 

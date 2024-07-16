@@ -1,12 +1,22 @@
 cmake_minimum_required(VERSION 3.16)
 
 add_library(uibase SHARED)
-mo2_configure_uibase(uibase
-	WARNINGS ON
-	EXTERNAL_WARNINGS ON
-	TRANSLATIONS OFF
-	PUBLIC_DEPENDS Qt::Widgets Qt::Network Qt::QuickWidgets
-	PRIVATE_DEPENDS boost boost::thread Qt::Qml Qt::Quick spdlog)
+if(WIN32)
+	mo2_configure_uibase(uibase
+		WARNINGS ON
+		EXTERNAL_WARNINGS ON
+		TRANSLATIONS OFF
+		PUBLIC_DEPENDS Qt::Widgets Qt::Network Qt::QuickWidgets
+		PRIVATE_DEPENDS boost boost::thread Qt::Qml Qt::Quick spdlog)
+else()
+	# Qt::DBus is required for taskbar progress updates
+	mo2_configure_uibase(uibase
+		WARNINGS ON
+		EXTERNAL_WARNINGS ON
+		TRANSLATIONS OFF
+		PUBLIC_DEPENDS Qt::Widgets Qt::Network Qt::QuickWidgets Qt::DBus
+		PRIVATE_DEPENDS boost boost::thread Qt::Qml Qt::Quick spdlog)
+endif()
 target_compile_definitions(uibase PRIVATE -DUIBASE_EXPORT)
 mo2_install_target(uibase)
 

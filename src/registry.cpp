@@ -29,6 +29,7 @@ namespace MOBase
 bool WriteRegistryValue(LPCWSTR appName, LPCWSTR keyName, LPCWSTR value,
                         LPCWSTR fileName)
 {
+#ifdef _WIN32
   bool success = true;
   if (!::WritePrivateProfileString(appName, keyName, value, fileName)) {
     success = false;
@@ -75,6 +76,11 @@ bool WriteRegistryValue(LPCWSTR appName, LPCWSTR keyName, LPCWSTR value,
   }
 
   return success;
+#else
+  //TODO: implement this function
+  // -> write data into wine registry
+  return false;
+#endif
 }
 
 }  // namespace MOBase

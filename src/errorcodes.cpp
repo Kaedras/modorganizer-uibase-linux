@@ -3,7 +3,7 @@
 
 namespace MOBase
 {
-
+#ifdef _WIN32
 struct CodeName
 {
   DWORD code          = 0;
@@ -2356,5 +2356,10 @@ const wchar_t* errorCodeName(DWORD code)
 
   return NotFound;
 }
+#else // _WIN32
+QDLLEXPORT const char* errorCodeName(int code){
+  return strerror(code);
+}
+#endif // _WIN32
 
 }  // namespace MOBase

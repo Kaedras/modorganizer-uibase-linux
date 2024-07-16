@@ -26,7 +26,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <QMainWindow>
 #include <QString>
 #include <QVariant>
+#ifdef _WIN32
 #include <Windows.h>
+#else
+typedef pid_t HANDLE;
+typedef uint32_t* LPDWORD;
+#endif // _WIN32
 #include <any>
 #include <functional>
 

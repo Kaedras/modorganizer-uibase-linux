@@ -697,9 +697,19 @@ std::shared_ptr<const FileTreeEntry> IFileTree::fetchEntry(QStringList const& pa
       tree = tree->parent().get();
     } else {
       // Find the entry at the current level:
+#ifdef __MSVC__
       auto entryIt = std::find_if(tree->begin(), tree->end(),
                                   MatchEntryComparator{*it, IFileTree::DIRECTORY});
+#else
+      auto entryIt = tree->end();
 
+      for(auto entry= tree->begin();entry != tree->end(); it++){
+        if((entry->fileType() == IFileTree::DIRECTORY) && entry->compare(*it) == 0){
+          entryIt = entry;
+          break;
+        }
+      }
+#endif
       // Early exists if the entry does not exist or is not a directory:
       if (entryIt == tree->end()) {
         tree = nullptr;
@@ -714,8 +724,18 @@ std::shared_ptr<const FileTreeEntry> IFileTree::fetchEntry(QStringList const& pa
   }
 
   // We have the final tree:
+#ifdef __MSVC__
   auto entryIt =
       std::find_if(tree->begin(), tree->end(), MatchEntryComparator{*it, matchTypes});
+#else
+  auto entryIt = tree->end();
+  for(auto entry= tree->begin();entry != tree->end(); it++){
+    if((entry->fileType() == matchTypes) && entry->compare(*it) == 0){
+      entryIt = entry;
+      break;
+    }
+  }
+#endif
   auto bIt = tree->end();
   return entryIt == bIt ? nullptr : *entryIt;
 }

@@ -1,3 +1,4 @@
+#ifdef __WIN32
 #include "taskprogressmanager.h"
 #include "log.h"
 #include "utility.h"
@@ -116,3 +117,4 @@ TaskProgressManager::TaskProgressManager()
 {}
 
 }  // namespace MOBase
+#endif

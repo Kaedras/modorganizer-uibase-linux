@@ -9,9 +9,10 @@
 
 namespace MOBase
 {
-
+#ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable : 4275)  // non-dll interface
+#endif
 
 /**
  * @brief exception class that takes a QString as the parameter
@@ -27,7 +28,9 @@ private:
   QByteArray m_Message;
 };
 
+#ifdef _WIN32
 #pragma warning(pop)
+#endif
 
 // Exception thrown in case of incompatibilities, i.e. between plugins.
 class QDLLEXPORT IncompatibilityException : public Exception

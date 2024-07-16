@@ -86,6 +86,9 @@ void TutorialControl::expose(const QString& widgetName, QObject* widget)
 
 static QString canonicalPath(const QString& path)
 {
+  // TODO: check if the line below is sufficient
+  std::filesystem::path canonical = std::filesystem::canonical(path.toStdString());
+#ifdef _WIN32
   std::unique_ptr<wchar_t[]> buffer(new wchar_t[32768]);
   DWORD res = ::GetShortPathNameW((wchar_t*)path.utf16(), buffer.get(), 32768);
   if (res == 0) {
@@ -95,7 +98,14 @@ static QString canonicalPath(const QString& path)
   if (res == 0) {
     return path;
   }
-  return QString::fromWCharArray(buffer.get());
+
+  QString retVal = QString::fromWCharArray(buffer.get());
+  if(retVal.toStdWString() != canonical){
+    log::warn("std::filesystem::canonical returned different string than GetShortPathNameW, expected '{}', got '{}'", retVal, canonical);
+  }
+  return retVal;
+#endif
+  return QString::fromStdString(canonical);
 }
 
 void TutorialControl::startTutorial(const QString& tutorial)
