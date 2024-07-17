@@ -3,18 +3,14 @@
 #include "utility.h"
 #include <iostream>
 
-#ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable : 4668)
-#endif // _WIN32
 #include <boost/algorithm/string.hpp>
-#ifdef _WIN32
 #pragma warning(pop)
 
 #pragma warning(push)
 #pragma warning(disable : 4365)
 #define SPDLOG_WCHAR_FILENAMES 1
-#endif // _WIN32
 #include <spdlog/logger.h>
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -22,17 +18,7 @@
 #include <spdlog/sinks/dist_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#ifdef _WIN32
 #pragma warning(pop)
-#endif // _WIN32
-
-#ifdef __linux__
-// colours copied from spdlog/sinks/ansicolor_sink.h
-static constexpr spdlog::string_view_t FOREGROUND_RED =   "\033[31m";
-static constexpr spdlog::string_view_t FOREGROUND_GREEN = "\033[32m";
-static constexpr spdlog::string_view_t FOREGROUND_BLUE =  "\033[33m";
-static constexpr spdlog::string_view_t FOREGROUND_WHITE = "\033[37m";
-#endif
 
 namespace MOBase::log
 {
@@ -310,30 +296,19 @@ void Logger::resetBlacklist()
 void Logger::createLogger(const std::string& name)
 {
   m_sinks.reset(new spdlog::sinks::dist_sink<std::mutex>);
-#ifdef _WIN32
   DWORD console_mode;
   if (::GetConsoleMode(::GetStdHandle(STD_ERROR_HANDLE), &console_mode) != 0) {
     using sink_type = spdlog::sinks::wincolor_stderr_sink_mt;
-#else
-  using sink_type = spdlog::sinks::stderr_color_sink_mt;
-#endif // _WIN32
     m_console.reset(new sink_type);
 
     if (auto* cs = dynamic_cast<sink_type*>(m_console.get())) {
-#ifdef _WIN32
       cs->set_color(spdlog::level::info,
                     FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
       cs->set_color(spdlog::level::debug,
                     FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-#else
-      cs->set_color(spdlog::level::info, FOREGROUND_WHITE);
-      cs->set_color(spdlog::level::debug, FOREGROUND_WHITE);
-#endif
     }
     addSink(m_console);
-#ifdef _WIN32
   }
-#endif
 
   m_logger.reset(new spdlog::logger(name, m_sinks));
 }

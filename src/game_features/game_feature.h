@@ -13,11 +13,7 @@ class GameFeature
 {
 public:
   GameFeature()          = default;
-#ifdef _WIN32
-  virtual ~GameFeature() = 0 {}
-#else
   virtual ~GameFeature() = 0;
-#endif
   /**
    * @brief Retrieve the type index of the main game feature this feature extends.
    */

@@ -26,40 +26,53 @@ along with Mod Organizer.  If not, see <http://www.gnu.org/licenses/>.
 namespace MOBase
 {
 
-bool WriteRegistryValue(LPCWSTR appName, LPCWSTR keyName, LPCWSTR value,
-                        LPCWSTR fileName)
-{
-#ifdef _WIN32
-  bool success = true;
-  if (!::WritePrivateProfileString(appName, keyName, value, fileName)) {
-    success = false;
-    switch (::GetLastError()) {
-    case ERROR_ACCESS_DENIED: {
-      DWORD attrs = ::GetFileAttributes(fileName);
-      if ((attrs != INVALID_FILE_ATTRIBUTES) && (attrs & FILE_ATTRIBUTE_READONLY)) {
-        QFileInfo fileInfo(QString("%1").arg(fileName));
+/**
+ *
+ * @param appName The name of the section to which the string will be copied. If the section does not exist, it is created. The name of the section is case-independent; the string can be any combination of uppercase and lowercase letters.
+ * @param keyName The name of the key to be associated with a string. If the key does not exist in the specified section, it is created. If this parameter is NULL, the entire section, including all entries within the section, is deleted.
+ * @param value A null-terminated string to be written to the file. If this parameter is NULL, the key pointed to by the lpKeyName parameter is deleted.
+ * @param fileName The name of the initialization file.
+ * @return
+ */
 
+bool WriteRegistryValue(const char* appName, const char* keyName, const char* value,
+                        const char* fileName)
+{
+  QString fileNameQString = QString("%1").arg(fileName);
+  QSettings settings(fileNameQString, QSettings::Format::IniFormat);
+  QString key = QString("%1/%2").arg(appName, keyName);
+  bool success = true;
+
+  settings.setValue(key, value);
+  settings.sync();
+  if (settings.status() != QSettings::NoError) {
+    success = false;
+    switch (settings.status()) {
+    case QSettings::AccessError: {
+      QFile file(fileNameQString);
+      if (!file.isWritable() && file.isReadable()) {
         QMessageBox::StandardButton result =
             MOBase::TaskDialog(qApp->activeModalWidget(),
                                QObject::tr("INI file is read-only"))
                 .main(QObject::tr("INI file is read-only"))
                 .content(QObject::tr("Mod Organizer is attempting to write to \"%1\" "
                                      "which is currently set to read-only.")
-                             .arg(fileInfo.fileName()))
+                             .arg(file.fileName()))
                 .icon(QMessageBox::Warning)
                 .button({QObject::tr("Clear the read-only flag"), QMessageBox::Yes})
                 .button({QObject::tr("Allow the write once"),
                          QObject::tr("The file will be set to read-only again."),
                          QMessageBox::Ignore})
                 .button({QObject::tr("Skip this file"), QMessageBox::No})
-                .remember("clearReadOnly", fileInfo.fileName())
+                .remember("clearReadOnly", file.fileName())
                 .exec();
 
+        auto oldPermissions = file.permissions();
         // clear the read-only flag if requested
         if (result & (QMessageBox::Yes | QMessageBox::Ignore)) {
-          attrs &= ~(FILE_ATTRIBUTE_READONLY);
-          if (::SetFileAttributes(fileName, attrs)) {
-            if (::WritePrivateProfileString(appName, keyName, value, fileName)) {
+          if (file.setPermissions(oldPermissions | QFile::Permission::WriteOwner)) {
+            settings.setValue(key, value);
+            if (settings.status() == QSettings::NoError) {
               success = true;
             }
           }
@@ -67,20 +80,20 @@ bool WriteRegistryValue(LPCWSTR appName, LPCWSTR keyName, LPCWSTR value,
 
         // set the read-only flag if requested
         if (result == QMessageBox::Ignore) {
-          attrs |= FILE_ATTRIBUTE_READONLY;
-          ::SetFileAttributes(fileName, attrs);
+          file.setPermissions(oldPermissions);
         }
       }
     } break;
+    case QSettings::FormatError:
+      log::error("format error while writing settings to '{}'", fileName);
+      success = false;
+      break;
+    default:
+      break;
     }
   }
 
   return success;
-#else
-  //TODO: implement this function
-  // -> write data into wine registry
-  return false;
-#endif
 }
 
 }  // namespace MOBase

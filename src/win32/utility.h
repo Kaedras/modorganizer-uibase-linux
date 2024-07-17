@@ -28,24 +28,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <QTextStream>
 #include <QUrl>
 #include <QVariant>
-#ifdef _WIN32
 #include <ShlObj.h>
 #include <Windows.h>
-#else
-typedef uint32_t DWORD;
-typedef pid_t HANDLE;
-typedef int NTSTATUS;
-typedef int HRESULT;
-#define INVALID_HANDLE_VALUE 0
-#endif // _WIN32
 #include <algorithm>
 #include <set>
 #include <vector>
 
 #include "dllimport.h"
 #include "exceptions.h"
-
-// TODO: implement missing functions
 
 namespace MOBase
 {
@@ -180,7 +170,6 @@ QDLLEXPORT bool shellDeleteQuiet(const QString& fileName, QWidget* dialog = null
 
 namespace shell
 {
-#ifdef _WIN32
   namespace details
   {
     // used by HandlePtr, calls CloseHandle() as the deleter
@@ -199,7 +188,7 @@ namespace shell
 
     using HandlePtr = std::unique_ptr<HANDLE, HandleCloser>;
   }  // namespace details
-#endif // _WIN32
+
   // returned by the various shell functions; note that the process handle is
   // closed in the destructor, unless stealProcessHandle() was called
   //
@@ -233,12 +222,12 @@ namespace shell
     // process handle, if any
     //
     HANDLE processHandle() const;
-#ifdef _WIN32
+
     // process handle, if any; sets the internal handle to INVALID_HANDLE_VALUE
     // so that the caller is in charge of closing it
     //
     HANDLE stealProcessHandle();
-#endif
+
     // the message, or the error number if empty
     //
     QString toString() const;
@@ -247,11 +236,7 @@ namespace shell
     bool m_success;
     DWORD m_error;
     QString m_message;
-#ifdef __WIN32
     details::HandlePtr m_process;
-#else
-    pid_t m_process;
-#endif
   };
 
   // returns a string representation of the given shell error; these errors are
@@ -404,7 +389,6 @@ QDLLEXPORT QString ToQString(const std::string& source);
  **/
 QDLLEXPORT QString ToQString(const std::wstring& source);
 
-#ifdef _WIN32
 /**
  * @brief convert a systemtime object to a string containing date and time in local
  *representation
@@ -413,7 +397,7 @@ QDLLEXPORT QString ToQString(const std::wstring& source);
  * @return string representation of the time object
  **/
 QDLLEXPORT QString ToString(const SYSTEMTIME& time);
-#endif // _WIN32
+
 // three-way compare for natural sorting (case insensitive default, 10 comes
 // after 2)
 //
@@ -436,7 +420,6 @@ private:
   Qt::CaseSensitivity m_cs;
 };
 
-#ifdef _WIN32
 /**
  * throws on failure
  * @param id    the folder id
@@ -448,7 +431,6 @@ QDLLEXPORT QDir getKnownFolder(KNOWNFOLDERID id, const QString& what = {});
 // same as above, does not log failure
 //
 QDLLEXPORT QString getOptionalKnownFolder(KNOWNFOLDERID id);
-#endif // _WIN32
 
 /**
  * throws on failure
@@ -619,36 +601,73 @@ private:
 template <class F>
 bool forEachLineInFile(const QString& filePath, F&& f)
 {
-  QFile file(filePath);
-  file.open(QIODevice::ReadOnly | QIODevice::Text);
-  if(!file.isOpen() || file.size() == 0 || !file.isReadable()) {
+  HANDLE h =
+      ::CreateFileW(reinterpret_cast<const wchar_t*>(filePath.utf16()), GENERIC_READ,
+                    FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+
+  if (h == INVALID_HANDLE_VALUE) {
     return false;
   }
 
   MOBase::Guard g([&] {
-    file.close();
+    ::CloseHandle(h);
   });
 
-  while(!file.atEnd()) {
-    QByteArray line = file.readLine();
-    // skip empty lines
-    if (line.isEmpty()) {
-      continue;
-    }
-    // remove whitespaces from beginning and end of line
-    line = line.trimmed();
-    // skip comments
-    if (line.startsWith('#')) {
-      continue;
-    }
-    // skip line if it only had whitespaces
-    if (line.isEmpty()) {
-      continue;
-    }
-    f(QString::fromUtf8(line));
+  LARGE_INTEGER fileSize;
+  if (!GetFileSizeEx(h, &fileSize)) {
+    return false;
   }
+
+  auto buffer     = std::make_unique<char[]>(fileSize.QuadPart);
+  DWORD byteCount = static_cast<DWORD>(fileSize.QuadPart);
+  if (!::ReadFile(h, buffer.get(), byteCount, &byteCount, nullptr)) {
+    return false;
+  }
+
+  const char* lineStart = buffer.get();
+  const char* p         = lineStart;
+  const char* end       = buffer.get() + byteCount;
+
+  while (p < end) {
+    // skip all newline characters
+    while ((p < end) && (*p == '\n' || *p == '\r')) {
+      ++p;
+    }
+
+    // line starts here
+    lineStart = p;
+
+    // find end of line
+    while ((p < end) && *p != '\n' && *p != '\r') {
+      ++p;
+    }
+
+    if (p != lineStart) {
+      // skip whitespace at beginning of line, don't go past end of line
+      while (std::isspace(*lineStart) && lineStart < p) {
+        ++lineStart;
+      }
+
+      // skip comments
+      if (*lineStart != '#') {
+        // skip line if it only had whitespace
+        if (lineStart < p) {
+          // skip white at end of line
+          const char* lineEnd = p - 1;
+          while (std::isspace(*lineEnd) && lineEnd > lineStart) {
+            --lineEnd;
+          }
+          ++lineEnd;
+
+          f(QString::fromUtf8(lineStart, lineEnd - lineStart));
+        }
+      }
+    }
+  }
+
   return true;
 }
+
 }  // namespace MOBase
 
 #endif  // MO_UIBASE_UTILITY_INCLUDED

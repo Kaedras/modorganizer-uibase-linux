@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <QMessageBox>
 #ifdef _WIN32
 #include <Windows.h>
-#endif
+#endif // _WIN32
 
 namespace MOBase
 {
@@ -73,9 +73,7 @@ void reportError(const QString& message)
 #ifdef _WIN32
     ::MessageBoxW(0, message.toStdWString().c_str(),
                   QObject::tr("Error").toStdWString().c_str(), MB_ICONERROR | MB_OK);
-#else
-  log::error("could not show error dialog");
-#endif
+#endif // _WIN32
   }
 }
 

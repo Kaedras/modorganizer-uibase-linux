@@ -32,16 +32,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <QtDebug>
 #include <memory>
 #include <sstream>
-#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-#else
-#include <csignal>
-#include "linux/xdg.hpp"
-#define sprintf_s sprintf
-#define DebugBreak() raise(SIGTRAP);
-#define ERROR_SUCCESS 0
-#endif
 #include <format>
 
 #define FO_RECYCLE 0x1003
@@ -63,10 +55,8 @@ bool removeDir(const QString& dirName)
           return false;
         }
       } else {
-#ifdef _WIN32
         ::SetFileAttributesW(ToWString(info.absoluteFilePath()).c_str(),
                              FILE_ATTRIBUTE_NORMAL);
-#endif
         QFile file(info.absoluteFilePath());
         if (!file.remove()) {
           reportError(QObject::tr("removal of \"%1\" failed: %2")
@@ -120,7 +110,7 @@ bool copyDir(const QString& sourceName, const QString& destinationName, bool mer
   }
   return true;
 }
-#ifdef _WIN32
+
 static DWORD TranslateError(int error)
 {
   switch (error) {
@@ -297,7 +287,7 @@ bool shellDelete(const QStringList& fileNames, bool recycle, QWidget* dialog)
   const UINT op = static_cast<UINT>(recycle ? FO_RECYCLE : FO_DELETE);
   return shellOp(fileNames, QStringList(), dialog, op, false);
 }
-#endif // _WIN32
+
 namespace shell
 {
 
@@ -341,23 +331,18 @@ namespace shell
   {
     return m_message;
   }
+
   HANDLE Result::processHandle() const
   {
-#ifdef _WIN32
     return m_process.get();
-#else
-    return m_process;
-#endif
   }
 
-#ifdef _WIN32
   HANDLE Result::stealProcessHandle()
   {
     const auto h = m_process.release();
     m_process.reset(INVALID_HANDLE_VALUE);
     return h;
   }
-#endif
 
   QString Result::toString() const
   {
@@ -368,7 +353,6 @@ namespace shell
     }
   }
 
-#ifdef _WIN32
   QString formatError(int i)
   {
     switch (i) {
@@ -418,7 +402,6 @@ namespace shell
       return QString("Unknown error %1").arg(i);
     }
   }
-#endif
 
   void LogShellFailure(const wchar_t* operation, const wchar_t* file,
                        const wchar_t* params, DWORD error)
@@ -440,7 +423,6 @@ namespace shell
     log::error("failed to invoke '{}': {}", s.join(" "), formatSystemMessage(error));
   }
 
-#ifdef _WIN32
   Result ShellExecuteWrapper(const wchar_t* operation, const wchar_t* file,
                              const wchar_t* params)
   {
@@ -617,24 +599,15 @@ namespace shell
 
     return wpath;
   }
-#endif // _WIN32
 
   Result Delete(const QFileInfo& path)
   {
-#ifdef _WIN32
     const auto wpath = toUNC(path);
 
     if (!::DeleteFileW(wpath.c_str())) {
       const auto e = ::GetLastError();
       return Result::makeFailure(e);
     }
-#else
-    QFile file = path.canonicalPath();
-    if(!file.remove()){
-      int e = errno;
-      return Result::makeFailure(e);
-    }
-#endif
 
     return Result::makeSuccess();
   }
@@ -644,7 +617,6 @@ namespace shell
     return Rename(src, dest, true);
   }
 
-#ifdef _WIN32
   Result Rename(const QFileInfo& src, const QFileInfo& dest, bool copyAllowed)
   {
     const auto wsrc  = toUNC(src);
@@ -686,7 +658,6 @@ namespace shell
 
     return Result::makeSuccess();
   }
-#endif // _WIN32
 
 }  // namespace shell
 
@@ -771,7 +742,6 @@ QString ToQString(const std::wstring& source)
   return QString::fromStdWString(source);
 }
 
-#ifdef _WIN32
 QString ToString(const SYSTEMTIME& time)
 {
   char dateBuffer[100];
@@ -783,7 +753,6 @@ QString ToString(const SYSTEMTIME& time)
                  size);
   return QString::fromLocal8Bit(dateBuffer) + " " + QString::fromLocal8Bit(timeBuffer);
 }
-#endif //_WIN32
 
 static int naturalCompareI(const QString& a, const QString& b)
 {
@@ -811,11 +780,12 @@ int naturalCompare(const QString& a, const QString& b, Qt::CaseSensitivity cs)
 
   return c.compare(a, b);
 }
-#ifdef _WIN32
+
 struct CoTaskMemFreer
 {
   void operator()(void* p) { ::CoTaskMemFree(p); }
 };
+
 template <class T>
 using COMMemPtr = std::unique_ptr<T, CoTaskMemFreer>;
 
@@ -858,56 +828,21 @@ QDir getKnownFolder(KNOWNFOLDERID id, const QString& what)
 
   return QString::fromWCharArray(path.get());
 }
-#endif
 
 QString getDesktopDirectory()
 {
-#ifdef _WIN32
   return getKnownFolder(FOLDERID_Desktop, "desktop").absolutePath();
-#endif
-  // NOTE: there could potentially be issues without an XDG-compliant desktop environment
-  // if a user does not know what this means, they usually use a compliant one
-
-  using namespace std;
-  string configHome = xdg::ConfigHomeDir();
-  QFile conf = QString::fromStdString(configHome + "/user-dirs.dirs");
-  if(conf.open(QIODevice::ReadOnly)) {
-    QByteArrayView lookup = "XDG_DESKTOP_DIR=";
-    while(!conf.atEnd()){
-      QByteArray line = conf.readLine();
-      if(line.startsWith(lookup)){
-        line.remove(0,lookup.length());
-        // adjust array size
-        line.squeeze();
-        return line;
-      }
-    }
-  }
-
-  filesystem::path home = getenv("HOME");
-  // use $HOME/Desktop as default
-  return QString::fromStdString(home / "Desktop");
 }
 
 QString getStartMenuDirectory()
 {
-#ifdef _WIN32
   return getKnownFolder(FOLDERID_StartMenu, "start menu").absolutePath();
-#else
-  std::filesystem::path path = xdg::DataHomeDir();
-  path /= "applications";
-  return QString::fromStdString(path);
-#endif
 }
 
 bool shellDeleteQuiet(const QString& fileName, QWidget* dialog)
 {
   if (!QFile::remove(fileName)) {
-#ifdef _WIN32
     return shellDelete(QStringList(fileName), false, dialog);
-#else
-    return false;
-#endif
   }
   return true;
 }
@@ -963,25 +898,16 @@ void removeOldFiles(const QString& path, const QString& pattern, int numToKeep,
     for (int i = 0; i < files.count() - numToKeep; ++i) {
       deleteFiles.append(files.at(i).absoluteFilePath());
     }
-#ifdef _WIN32
+
     if (!shellDelete(deleteFiles)) {
       const auto e = ::GetLastError();
       log::warn("failed to remove log files: {}", formatSystemMessage(e));
     }
-#else
-    for(const auto& file: deleteFiles){
-      QFile f(file);
-      if(!f.remove()){
-        log::warn("failed to remove log files: {}", f.errorString());
-      }
-    }
-#endif
   }
 }
 
 QIcon iconForExecutable(const QString& filePath)
 {
-#ifdef _WIN32
   HICON winIcon;
   UINT res = ::ExtractIconExW(ToWString(filePath).c_str(), 0, &winIcon, nullptr, 1);
   if (res == 1) {
@@ -992,15 +918,10 @@ QIcon iconForExecutable(const QString& filePath)
   } else {
     return QIcon(":/MO/gui/executable");
   }
-#else
-  // TODO: implement this, could be done with 7z
-  return QIcon(":/MO/gui/executable");
-#endif
 }
 
 QString getFileVersion(QString const& filepath)
 {
-#ifdef _WIN32
   // This *really* needs to be factored out
   std::wstring app_name =
       L"\\\\?\\" +
@@ -1030,15 +951,10 @@ QString getFileVersion(QString const& filepath)
       .arg(LOWORD(pFileInfo->dwFileVersionMS))
       .arg(HIWORD(pFileInfo->dwFileVersionLS))
       .arg(LOWORD(pFileInfo->dwFileVersionLS));
-#else
-  // TODO: implement this, could be done with 7z
-  return "1.0.0";
-#endif
 }
 
 QString getProductVersion(QString const& filepath)
 {
-#ifdef _WIN32
   // This *really* needs to be factored out
   std::wstring app_name =
       L"\\\\?\\" +
@@ -1076,10 +992,6 @@ QString getProductVersion(QString const& filepath)
   }
 
   return QString::fromWCharArray((LPCWSTR)lpb);
-#else
-  // TODO: implement this, could be done with 7z
-  return "1.0.0";
-#endif
 }
 
 void deleteChildWidgets(QWidget* w)
@@ -1103,7 +1015,7 @@ void trimWString(std::wstring& s)
                          }),
           s.end());
 }
-#ifdef _WIN32
+
 std::wstring getMessage(DWORD id, HMODULE mod)
 {
   wchar_t* message = nullptr;
@@ -1164,7 +1076,6 @@ QString windowsErrorString(DWORD errorCode)
 {
   return QString::fromStdWString(formatSystemMessage(errorCode));
 }
-#endif
 
 QString localizedSize(unsigned long long bytes, const QString& B, const QString& KB,
                       const QString& MB, const QString& GB, const QString& TB)

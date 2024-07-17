@@ -1,12 +1,8 @@
 #include "taskprogressmanager.h"
 
-// make sure this is only used on linux
-#ifdef __linux__
-
 #include "log.h"
 #include <QtDBus/QtDBus>
 
-// linux implementation taken from https://stackoverflow.com/questions/43875343/kde-taskbar-progress/43919667#43919667
 namespace MOBase
 {
 TaskProgressManager& MOBase::TaskProgressManager::instance()
@@ -57,7 +53,7 @@ void TaskProgressManager::showProgress() {
 
   QVariantMap properties;
   if (!m_Percentages.empty()){
-    properties.insert(QStringLiteral("progress-visible"), true);// enable the progress
+    properties.insert(QStringLiteral("progress-visible"), true); // enable the progress
 
     QTime now                = QTime::currentTime();
     unsigned long long total = 0;
@@ -86,7 +82,7 @@ void TaskProgressManager::showProgress() {
 }
 
 
-TaskProgressManager::TaskProgressManager() : m_NextId(1), m_CreateTries(10)
+TaskProgressManager::TaskProgressManager() : m_NextId(1)
 {
   if(QGuiApplication::desktopFileName().isEmpty()) {
     log::warn("MO2 has no desktop file name");
@@ -97,5 +93,3 @@ TaskProgressManager::TaskProgressManager() : m_NextId(1), m_CreateTries(10)
 }
 
 }
-
-#endif

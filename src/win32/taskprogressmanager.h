@@ -6,13 +6,9 @@
 #include <QObject>
 #include <QTime>
 #include <QTimer>
-#include <map>
-#ifdef _WIN32
 #include <Windows.h>
+#include <map>
 #include <shobjidl.h>
-#else
-#include <QtDBus/QtDBus>
-#endif
 
 namespace MOBase
 {
@@ -30,10 +26,8 @@ public:
 
   quint32 getId();
 
-#ifdef _WIN32
 public slots:
   bool tryCreateTaskbar();
-#endif
 
 private:
   TaskProgressManager();
@@ -46,14 +40,11 @@ private:
   QTimer m_CreateTimer;
   int m_CreateTries;
 
-#ifdef _WIN32
   HWND m_WinId;
 
   ITaskbarList3* m_Taskbar;
-#else
-  bool m_successful;
-#endif
 };
 
 }  // namespace MOBase
+
 #endif  // TASKPROGRESSMANAGER_H

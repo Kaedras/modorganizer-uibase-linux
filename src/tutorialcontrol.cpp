@@ -84,30 +84,6 @@ void TutorialControl::expose(const QString& widgetName, QObject* widget)
   m_ExposedObjects.push_back(std::make_pair(widgetName, widget));
 }
 
-static QString canonicalPath(const QString& path)
-{
-  // TODO: check if the line below is sufficient
-  std::filesystem::path canonical = std::filesystem::canonical(path.toStdString());
-#ifdef _WIN32
-  std::unique_ptr<wchar_t[]> buffer(new wchar_t[32768]);
-  DWORD res = ::GetShortPathNameW((wchar_t*)path.utf16(), buffer.get(), 32768);
-  if (res == 0) {
-    return path;
-  }
-  res = ::GetLongPathNameW(buffer.get(), buffer.get(), 32768);
-  if (res == 0) {
-    return path;
-  }
-
-  QString retVal = QString::fromWCharArray(buffer.get());
-  if(retVal.toStdWString() != canonical){
-    log::warn("std::filesystem::canonical returned different string than GetShortPathNameW, expected '{}', got '{}'", retVal, canonical);
-  }
-  return retVal;
-#endif
-  return QString::fromStdString(canonical);
-}
-
 void TutorialControl::startTutorial(const QString& tutorial)
 {
   if (m_TutorialView == nullptr) {
@@ -121,7 +97,7 @@ void TutorialControl::startTutorial(const QString& tutorial)
     m_TutorialView->rootContext()->setContextProperty("manager", &m_Manager);
 
     QString qmlName =
-        canonicalPath(QCoreApplication::applicationDirPath() + "/tutorials") +
+        QString::fromStdString(canonical(std::filesystem::path(QApplication::applicationDirPath().toStdString() + "/tutorials"))) +
         "/tutorials_" + m_Name.toLower() + ".qml";
     QUrl qmlSource = QUrl::fromLocalFile(qmlName);
 

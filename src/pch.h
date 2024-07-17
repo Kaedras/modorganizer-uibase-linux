@@ -1,4 +1,3 @@
-#ifdef _WIN32
 #pragma warning(disable : 4251)  // neds to have dll-interface
 #pragma warning(disable : 4355)  // this used in initializer list
 #pragma warning(disable : 4371)  // layout may have changed
@@ -26,7 +25,6 @@
 #pragma warning(disable : 5219)  // implicit int -> float conversion
 #pragma warning(                                                                       \
     disable : 5249)  // named enumerators with values outside of bit field width
-#endif // _WIN32
 #define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING 1
 
 // std
@@ -50,7 +48,7 @@
 #include <wchar.h>
 
 // windows
-#ifdef __WIN32
+#ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -60,7 +58,7 @@
 #include <ShlObj.h>
 #include <Windows.h>
 #include <shobjidl.h>
-#endif
+#endif // _WIN32
 
 // Qt
 #include <QAbstractButton>
@@ -133,6 +131,4 @@
 #include <qmetaobject.h>
 
 #undef _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
-#ifdef _WIN32
 #pragma warning(pop)
-#endif
