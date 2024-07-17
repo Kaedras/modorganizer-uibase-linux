@@ -10,7 +10,8 @@
 
 namespace MOBase
 {
-// limux implementation source: https://stackoverflow.com/questions/43875343/kde-taskbar-progress/43919667#43919667
+// limux implementation source:
+// https://stackoverflow.com/questions/43875343/kde-taskbar-progress/43919667#43919667
 class QDLLEXPORT TaskProgressManager : QObject
 {
 

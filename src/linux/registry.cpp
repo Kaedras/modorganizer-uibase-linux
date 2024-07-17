@@ -26,15 +26,6 @@ along with Mod Organizer.  If not, see <http://www.gnu.org/licenses/>.
 namespace MOBase
 {
 
-/**
- *
- * @param appName The name of the section to which the string will be copied. If the section does not exist, it is created. The name of the section is case-independent; the string can be any combination of uppercase and lowercase letters.
- * @param keyName The name of the key to be associated with a string. If the key does not exist in the specified section, it is created. If this parameter is NULL, the entire section, including all entries within the section, is deleted.
- * @param value A null-terminated string to be written to the file. If this parameter is NULL, the key pointed to by the lpKeyName parameter is deleted.
- * @param fileName The name of the initialization file.
- * @return
- */
-
 bool WriteRegistryValue(const char* appName, const char* keyName, const char* value,
                         const char* fileName)
 {

@@ -46,12 +46,14 @@ namespace fs = std::filesystem;
 namespace MOBase
 {
 
-enum spawnAction{
+enum spawnAction
+{
   spawn,
   spawnp
 };
-string spawnActionToString(spawnAction action){
-  switch(action){
+string spawnActionToString(spawnAction action)
+{
+  switch (action) {
   case spawn:
     return "spawn";
   case spawnp:
@@ -130,17 +132,17 @@ bool copyDir(const QString& sourceName, const QString& destinationName, bool mer
 bool shellDelete(const QStringList& fileNames, bool recycle, QWidget* dialog)
 {
   bool result = true;
-  for(const auto& fileName : fileNames){
+  for (const auto& fileName : fileNames) {
     bool r;
     QFile file = fileName;
-    if(recycle) {
+    if (recycle) {
       r = file.moveToTrash();
     } else {
       r = file.remove();
     }
-    if(!r) {
+    if (!r) {
       result = r;
-      int e = errno;
+      int e  = errno;
       log::error("error deleting file '{}': ", formatSystemMessage(e));
     }
   }
@@ -224,7 +226,7 @@ namespace shell
     }
 
     if (!params.empty()) {
-      for(auto param:params) {
+      for (auto param : params) {
         s << ToQString(param);
       }
     }
@@ -235,21 +237,25 @@ namespace shell
   Result ShellExecuteWrapper(spawnAction operation, const char* file,
                              vector<const char*> params)
   {
-    char **environ = nullptr;
+    char** environ = nullptr;
 
-    pid_t pid = 0;
+    pid_t pid  = 0;
     int status = -1;
 
-    // The only difference between posix_spawn() and posix_spawnp() is the manner in which they specify the file to be executed by the child process.
-    // With posix_spawn(), the executable file is specified as a pathname (which can be absolute or relative).
-    // With posix_spawnp(), the executable file is specified as a simple filename;
-    // the system searches for this file in the list of directories specified by PATH (in the same way as for execvp(3)).
-    switch(operation) {
+    // The only difference between posix_spawn() and posix_spawnp() is the manner in
+    // which they specify the file to be executed by the child process. With
+    // posix_spawn(), the executable file is specified as a pathname (which can be
+    // absolute or relative). With posix_spawnp(), the executable file is specified as a
+    // simple filename; the system searches for this file in the list of directories
+    // specified by PATH (in the same way as for execvp(3)).
+    switch (operation) {
     case spawn:
-      status  = posix_spawn(&pid, file, nullptr, nullptr, const_cast<char**>(params.data()), environ);
+      status = posix_spawn(&pid, file, nullptr, nullptr,
+                           const_cast<char**>(params.data()), environ);
       break;
     case spawnp:
-      status  = posix_spawnp(&pid, file, nullptr, nullptr, const_cast<char**>(params.data()), environ);
+      status = posix_spawnp(&pid, file, nullptr, nullptr,
+                            const_cast<char**>(params.data()), environ);
       break;
     }
 
@@ -270,14 +276,14 @@ namespace shell
 
   Result ExploreDirectory(const QFileInfo& info)
   {
-    const auto path    = QDir::toNativeSeparators(info.absoluteFilePath());
+    const auto path = QDir::toNativeSeparators(info.absoluteFilePath());
 
     return ShellExecuteWrapper(spawnp, "xdg-open", path.toStdString().c_str());
   }
 
   Result ExploreFileInDirectory(const QFileInfo& info)
   {
-    const auto path      = QDir::toNativeSeparators(info.absoluteFilePath());
+    const auto path = QDir::toNativeSeparators(info.absoluteFilePath());
 
     return ShellExecuteWrapper(spawnp, "xdg-open", path.toStdString().c_str());
   }
@@ -366,7 +372,7 @@ namespace shell
   Result Delete(const QFileInfo& path)
   {
     QFile file = path.canonicalPath();
-    if(!file.remove()){
+    if (!file.remove()) {
       int e = errno;
       return Result::makeFailure(e);
     }
@@ -377,7 +383,7 @@ namespace shell
   {
     QFile source(src.canonicalPath());
     if (!source.rename(dest.canonicalPath())) {
-      return Result::makeFailure(source.error(),source.errorString());
+      return Result::makeFailure(source.error(), source.errorString());
     }
 
     return Result::makeSuccess();
@@ -429,8 +435,7 @@ bool moveFileRecursive(const QString& source, const QString& baseDir,
     // move failed, try copy & delete
     if (!QFile::copy(source, destinationAbsolute)) {
       reportError(QObject::tr("failed to copy \"%1\" to \"%2\"")
-                      .arg(source)
-                      .arg(destinationAbsolute));
+                      .arg(source, destinationAbsolute));
       return false;
     } else {
       QFile::remove(source);
@@ -456,13 +461,11 @@ bool copyFileRecursive(const QString& source, const QString& baseDir,
   QString destinationAbsolute = baseDir.mid(0).append("/").append(destination);
   if (!QFile::copy(source, destinationAbsolute)) {
     reportError(QObject::tr("failed to copy \"%1\" to \"%2\"")
-                    .arg(source)
-                    .arg(destinationAbsolute));
+                    .arg(source, destinationAbsolute));
     return false;
   }
   return true;
 }
-
 
 std::string ToString(const QString& source, bool utf8)
 {
@@ -519,16 +522,17 @@ int naturalCompare(const QString& a, const QString& b, Qt::CaseSensitivity cs)
 
 QString getDesktopDirectory()
 {
-  // NOTE: there could potentially be issues without an XDG-compliant desktop environment
-  // if a user does not know what this means, they usually use a compliant one
+  // NOTE: there could potentially be issues without an XDG-compliant desktop
+  // environment if a user does not know what this means, they usually use a compliant
+  // one
   string configHome = xdg::ConfigHomeDir();
-  QFile conf = QString::fromStdString(configHome + "/user-dirs.dirs");
-  if(conf.open(QIODevice::ReadOnly)) {
+  QFile conf        = QString::fromStdString(configHome + "/user-dirs.dirs");
+  if (conf.open(QIODevice::ReadOnly)) {
     QByteArrayView lookup = "XDG_DESKTOP_DIR=";
-    while(!conf.atEnd()){
+    while (!conf.atEnd()) {
       QByteArray line = conf.readLine();
-      if(line.startsWith(lookup)){
-        line.remove(0,lookup.length());
+      if (line.startsWith(lookup)) {
+        line.remove(0, lookup.length());
         // adjust array size
         line.squeeze();
         return line;
@@ -606,9 +610,9 @@ void removeOldFiles(const QString& path, const QString& pattern, int numToKeep,
     for (int i = 0; i < files.count() - numToKeep; ++i) {
       deleteFiles.append(files.at(i).absoluteFilePath());
     }
-    for(const auto& file: deleteFiles){
+    for (const auto& file : deleteFiles) {
       QFile f(file);
-      if(!f.remove()){
+      if (!f.remove()) {
         log::error("failed to remove log files: {}", f.errorString());
       }
     }
@@ -617,27 +621,33 @@ void removeOldFiles(const QString& path, const QString& pattern, int numToKeep,
 
 QIcon iconForExecutable(const QString& filepath)
 {
- auto result=  shell::ShellExecuteWrapper(spawnp,"7z", {"x", filepath.toStdString().c_str(), ".rsrc/ICON/1", "-o /tmp/mo2/.rsrc/"});
- if(result.success()) {
-   return QIcon("/tmp/mo-icon.ico");
- }
+  auto result = shell::ShellExecuteWrapper(
+      spawnp, "7z",
+      {"x", filepath.toStdString().c_str(), ".rsrc/ICON/1", "-o /tmp/mo2/.rsrc/"});
+  if (result.success()) {
+    return QIcon("/tmp/mo-icon.ico");
+  }
 
   return QIcon(":/MO/gui/executable");
 }
 
-enum version_t{
+enum version_t
+{
   fileversion,
   productversion
 };
 
-QString getFileVersionInfo(QString const& filepath, version_t type){
-  auto result=  shell::ShellExecuteWrapper(spawnp,"7z", {"x", filepath.toStdString().c_str(), ".rsrc/version.txt", "-o /tmp/mo2/.rsrc/"});
+QString getFileVersionInfo(QString const& filepath, version_t type)
+{
+  auto result = shell::ShellExecuteWrapper(
+      spawnp, "7z",
+      {"x", filepath.toStdString().c_str(), ".rsrc/version.txt", "-o /tmp/mo2/.rsrc/"});
 
   QFile versionFile("/tmp/mo2/.rsrc/version.txt");
   QString version = "1.0.0";
 
   string keyword;
-  switch(type){
+  switch (type) {
   case fileversion:
     keyword = "FILEVERSION";
     break;
@@ -650,17 +660,17 @@ QString getFileVersionInfo(QString const& filepath, version_t type){
   // FILEVERSION     1,3,22,0 or FILEVERSION     1,3,22,0
   // to
   // 1.3.22.0
-  if(versionFile.isOpen()){
+  if (versionFile.isOpen()) {
     return version;
   }
-  while(!versionFile.atEnd()){
+  while (!versionFile.atEnd()) {
     auto line = versionFile.readLine();
-    if(line.startsWith(keyword)){
+    if (line.startsWith(keyword)) {
       line.remove(0, keyword.length());
       // remove whitespaces
       version = line.trimmed();
       // replace '' with ''
-      version.replace(',','.');
+      version.replace(',', '.');
       break;
     }
   }

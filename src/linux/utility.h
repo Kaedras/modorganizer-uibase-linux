@@ -546,7 +546,7 @@ bool forEachLineInFile(const QString& filePath, F&& f)
 {
   QFile file(filePath);
   file.open(QIODevice::ReadOnly | QIODevice::Text);
-  if(!file.isOpen() || file.size() == 0 || !file.isReadable()) {
+  if (!file.isOpen() || file.size() == 0 || !file.isReadable()) {
     return false;
   }
 
@@ -554,7 +554,7 @@ bool forEachLineInFile(const QString& filePath, F&& f)
     file.close();
   });
 
-  while(!file.atEnd()) {
+  while (!file.atEnd()) {
     QByteArray line = file.readLine();
     // skip empty lines
     if (line.isEmpty()) {

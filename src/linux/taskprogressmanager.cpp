@@ -11,8 +11,9 @@ TaskProgressManager& MOBase::TaskProgressManager::instance()
   return s_Instance;
 }
 
-void TaskProgressManager::forgetMe(quint32 id) {
-  if(!m_successful){
+void TaskProgressManager::forgetMe(quint32 id)
+{
+  if (!m_successful) {
     return;
   }
   auto iter = m_Percentages.find(id);
@@ -22,9 +23,10 @@ void TaskProgressManager::forgetMe(quint32 id) {
   showProgress();
 }
 
-void TaskProgressManager::updateProgress(quint32 id, qint64 value, qint64 max) {
+void TaskProgressManager::updateProgress(quint32 id, qint64 value, qint64 max)
+{
   QMutexLocker lock(&m_Mutex);
-  if(!m_successful){
+  if (!m_successful) {
     return;
   }
   if (value == max) {
@@ -46,14 +48,15 @@ quint32 TaskProgressManager::getId()
 }
 
 // TODO: test this function
-void TaskProgressManager::showProgress() {
-  auto message = QDBusMessage::createSignal(QStringLiteral("/org/ModOrganizer2/ModOrganizer2"),
-                             QStringLiteral("com.canonical.Unity.LauncherEntry"),
-                             QStringLiteral("Update"));
+void TaskProgressManager::showProgress()
+{
+  auto message = QDBusMessage::createSignal(
+      QStringLiteral("/org/ModOrganizer2/ModOrganizer2"),
+      QStringLiteral("com.canonical.Unity.LauncherEntry"), QStringLiteral("Update"));
 
   QVariantMap properties;
-  if (!m_Percentages.empty()){
-    properties.insert(QStringLiteral("progress-visible"), true); // enable the progress
+  if (!m_Percentages.empty()) {
+    properties.insert(QStringLiteral("progress-visible"), true);  // enable the progress
 
     QTime now                = QTime::currentTime();
     unsigned long long total = 0;
@@ -71,7 +74,9 @@ void TaskProgressManager::showProgress() {
       }
     }
     log::debug("setting progress to {}", total / (count * 100));
-    properties.insert(QStringLiteral("progress"), total / (count * 100)); // set the progress value (from 0.0 to 1.0)
+    properties.insert(QStringLiteral("progress"),
+                      total /
+                          (count * 100));  // set the progress value (from 0.0 to 1.0)
   } else {
     properties.insert(QStringLiteral("progress-visible"), false);
   }
@@ -81,10 +86,9 @@ void TaskProgressManager::showProgress() {
   QDBusConnection::sessionBus().send(message);
 }
 
-
 TaskProgressManager::TaskProgressManager() : m_NextId(1)
 {
-  if(QGuiApplication::desktopFileName().isEmpty()) {
+  if (QGuiApplication::desktopFileName().isEmpty()) {
     log::warn("MO2 has no desktop file name");
     m_successful = false;
     return;
@@ -92,4 +96,4 @@ TaskProgressManager::TaskProgressManager() : m_NextId(1)
   m_successful = true;
 }
 
-}
+}  // namespace MOBase
