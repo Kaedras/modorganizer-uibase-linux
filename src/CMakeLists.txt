@@ -4,11 +4,17 @@ find_package(Qt6 CONFIG REQUIRED COMPONENTS Network Qml Quick QuickWidgets Widge
 find_package(spdlog CONFIG REQUIRED)
 find_package(Boost REQUIRED CONFIG COMPONENTS thread)
 
+if(WIN32)
+	set(OS_SPECIFIC_DIR win32)
+else()
+	set(OS_SPECIFIC_DIR linux)
+endif()
+
 set(root_headers
 	../include/uibase/delayedfilewriter.h
 	../include/uibase/diagnosisreport.h
 	../include/uibase/dllimport.h
-	../include/uibase/errorcodes.h
+	../include/uibase/${OS_SPECIFIC_DIR}/errorcodes.h
 	../include/uibase/eventfilter.h
 	../include/uibase/exceptions.h
 	../include/uibase/executableinfo.h
@@ -30,6 +36,7 @@ set(root_headers
 	../include/uibase/scopeguard.h
 	../include/uibase/steamutility.h
 	../include/uibase/utility.h
+	../include/uibase/${OS_SPECIFIC_DIR}/utility.h
 	../include/uibase/versioninfo.h
 )
 set(interface_headers
@@ -69,7 +76,7 @@ set(widget_headers
 	../include/uibase/linklabel.h
 	../include/uibase/questionboxmemory.h
 	../include/uibase/sortabletreewidget.h
-	../include/uibase/taskprogressmanager.h
+	../include/uibase/${OS_SPECIFIC_DIR}/taskprogressmanager.h
 	../include/uibase/textviewer.h
 	../include/uibase/widgetutility.h
 )
@@ -104,13 +111,14 @@ mo2_target_sources(uibase
 	${root_headers}
 	delayedfilewriter.cpp
 	diagnosisreport.cpp
-	errorcodes.cpp
+	${OS_SPECIFIC_DIR}/errorcodes.cpp
 	eventfilter.cpp
 	executableinfo.cpp
 	filesystemutilities.cpp
 	guessedvalue.cpp
 	json.cpp
 	log.cpp
+	${OS_SPECIFIC_DIR}/log.cpp
 	modrepositoryfileinfo.cpp
 	nxmurl.cpp
 	pch.cpp
@@ -118,10 +126,12 @@ mo2_target_sources(uibase
 	pluginsetting.cpp
 	registry.cpp
 	report.cpp
+	${OS_SPECIFIC_DIR}/report.cpp
 	safewritefile.cpp
 	scopeguard.cpp
 	steamutility.cpp
 	utility.cpp
+	${OS_SPECIFIC_DIR}/utility.cpp
 	versioninfo.cpp
 )
 
@@ -154,7 +164,7 @@ mo2_target_sources(uibase
 	linklabel.cpp
 	questionboxmemory.cpp
 	sortabletreewidget.cpp
-	taskprogressmanager.cpp
+	${OS_SPECIFIC_DIR}/taskprogressmanager.cpp
 	textviewer.cpp
 	widgetutility.cpp
 	filterwidget.cpp
@@ -199,15 +209,25 @@ add_library(mo2::uibase ALIAS uibase)
 
 target_compile_definitions(uibase PRIVATE -DUIBASE_EXPORT SPDLOG_USE_STD_FORMAT)
 
-target_link_libraries(uibase
-	PUBLIC Qt6::Widgets Qt6::Network Qt6::QuickWidgets
-	PRIVATE
+if(WIN32)
+	target_link_libraries(uibase
+		PUBLIC Qt6::Widgets Qt6::Network Qt6::QuickWidgets
+		PRIVATE
 		Boost::headers Boost::thread spdlog::spdlog_header_only
 		Qt6::Qml Qt6::Quick Version)
+else()
+	target_link_libraries(uibase
+		PUBLIC Qt6::Widgets Qt6::Network Qt6::QuickWidgets
+		PRIVATE
+		Boost::headers Boost::thread spdlog::spdlog_header_only
+		Qt6::Qml Qt6::Quick)
+endif()
 
 # installation
 install(TARGETS uibase EXPORT uibaseTargets FILE_SET HEADERS)
-install(FILES $<TARGET_PDB_FILE:uibase> DESTINATION pdb)
+if (WIN32)
+	install(FILES $<TARGET_PDB_FILE:uibase> DESTINATION pdb)
+endif()
 install(EXPORT uibaseTargets
 	FILE mo2-uibase-targets.cmake
 	NAMESPACE mo2::

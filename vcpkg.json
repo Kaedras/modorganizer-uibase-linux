@@ -7,7 +7,7 @@
   "overrides": [
     {
       "name": "spdlog",
-      "version": "1.14.1"
+      "version": "1.14.1#1"
     }
   ],
   "features": {

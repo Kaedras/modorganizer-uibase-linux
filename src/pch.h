@@ -48,6 +48,7 @@
 #include <vector>
 #include <wchar.h>
 
+#ifdef _WIN32
 // windows
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -58,6 +59,7 @@
 #include <ShlObj.h>
 #include <Windows.h>
 #include <shobjidl.h>
+#endif // _WIN32
 
 // Qt
 #include <QAbstractButton>

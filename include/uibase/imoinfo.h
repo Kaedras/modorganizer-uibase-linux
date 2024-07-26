@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <QMainWindow>
 #include <QString>
 #include <QVariant>
-#include <Windows.h>
+
 #include <any>
 #include <functional>
 
@@ -35,6 +35,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "imodlist.h"
 #include "iprofile.h"
 #include "versioninfo.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+#else
+using HANDLE  = pid_t;
+using LPDWORD = int*;
+#endif
 
 namespace MOBase
 {

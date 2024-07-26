@@ -19,46 +19,58 @@ along with Mod Organizer.  If not, see <http://www.gnu.org/licenses/>.
 #include "log.h"
 #include "report.h"
 #include <QApplication>
-#include <QList>
 #include <QMessageBox>
 #include <QString>
 
 namespace MOBase
 {
+inline QString ToQString(const char* str)
+{
+  return QString::fromLocal8Bit(str);
+}
+inline QString ToQString(const wchar_t* str)
+{
+  return QString::fromWCharArray(str);
+}
 
 bool WriteRegistryValue(LPCWSTR appName, LPCWSTR keyName, LPCWSTR value,
                         LPCWSTR fileName)
 {
+  QString fileNameQString = ToQString(fileName);
+  QSettings settings(fileNameQString, QSettings::Format::IniFormat);
+  QString key  = QString("%1/%2").arg(appName, keyName);
   bool success = true;
-  if (!::WritePrivateProfileString(appName, keyName, value, fileName)) {
-    success = false;
-    switch (::GetLastError()) {
-    case ERROR_ACCESS_DENIED: {
-      DWORD attrs = ::GetFileAttributes(fileName);
-      if ((attrs != INVALID_FILE_ATTRIBUTES) && (attrs & FILE_ATTRIBUTE_READONLY)) {
-        QFileInfo fileInfo(QString("%1").arg(fileName));
 
+  settings.setValue(key, ToQString(value));
+  settings.sync();
+  if (settings.status() != QSettings::NoError) {
+    success = false;
+    switch (settings.status()) {
+    case QSettings::AccessError: {
+      QFile file(fileNameQString);
+      if (!file.isWritable() && file.isReadable()) {
         QMessageBox::StandardButton result =
             MOBase::TaskDialog(qApp->activeModalWidget(),
                                QObject::tr("INI file is read-only"))
                 .main(QObject::tr("INI file is read-only"))
                 .content(QObject::tr("Mod Organizer is attempting to write to \"%1\" "
                                      "which is currently set to read-only.")
-                             .arg(fileInfo.fileName()))
+                             .arg(file.fileName()))
                 .icon(QMessageBox::Warning)
                 .button({QObject::tr("Clear the read-only flag"), QMessageBox::Yes})
                 .button({QObject::tr("Allow the write once"),
                          QObject::tr("The file will be set to read-only again."),
                          QMessageBox::Ignore})
                 .button({QObject::tr("Skip this file"), QMessageBox::No})
-                .remember("clearReadOnly", fileInfo.fileName())
+                .remember("clearReadOnly", file.fileName())
                 .exec();
 
+        auto oldPermissions = file.permissions();
         // clear the read-only flag if requested
         if (result & (QMessageBox::Yes | QMessageBox::Ignore)) {
-          attrs &= ~(FILE_ATTRIBUTE_READONLY);
-          if (::SetFileAttributes(fileName, attrs)) {
-            if (::WritePrivateProfileString(appName, keyName, value, fileName)) {
+          if (file.setPermissions(oldPermissions | QFile::Permission::WriteOwner)) {
+            settings.setValue(key, ToQString(value));
+            if (settings.status() == QSettings::NoError) {
               success = true;
             }
           }
@@ -66,11 +78,16 @@ bool WriteRegistryValue(LPCWSTR appName, LPCWSTR keyName, LPCWSTR value,
 
         // set the read-only flag if requested
         if (result == QMessageBox::Ignore) {
-          attrs |= FILE_ATTRIBUTE_READONLY;
-          ::SetFileAttributes(fileName, attrs);
+          file.setPermissions(oldPermissions);
         }
       }
     } break;
+    case QSettings::FormatError:
+      log::error("Format error while writing settings to '{}'", fileNameQString);
+      success = false;
+      break;
+    default:
+      break;
     }
   }
 

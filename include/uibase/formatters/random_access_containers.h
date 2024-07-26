@@ -9,12 +9,8 @@ namespace MOBase::details
 {
 template <typename Container>
 concept random_access_container = requires(Container const& c) {
-  {
-    c.begin()
-  } -> std::random_access_iterator;
-  {
-    c.end()
-  } -> std::random_access_iterator;
+  { c.begin() } -> std::random_access_iterator;
+  { c.end() } -> std::random_access_iterator;
 };
 }  // namespace MOBase::details
 
@@ -37,7 +33,7 @@ struct std::formatter<Container, CharT>
   CharT close_bracket = static_cast<CharT>(']');
 
   // delimiter to use
-  basic_string_view<CharT> delimiter = ", ";
+  std::basic_string_view<CharT> delimiter = ", ";
 
   // maximum number of element to show
   std::size_t max_show = 3;
