@@ -216,11 +216,12 @@ if(WIN32)
 		Boost::headers Boost::thread spdlog::spdlog_header_only
 		Qt6::Qml Qt6::Quick Version)
 else()
+	target_compile_options(uibase PRIVATE -fvisibility-ms-compat  -Wl,--no-undefined)
 	target_link_libraries(uibase
 		PUBLIC Qt6::Widgets Qt6::Network Qt6::QuickWidgets
 		PRIVATE
 		Boost::headers Boost::thread spdlog::spdlog_header_only
-		Qt6::Qml Qt6::Quick)
+		Qt6::Qml Qt6::Quick Qt6::DBus)
 endif()
 
 # installation

@@ -60,7 +60,7 @@
           "value": "x64-linux"
         }
       },
-      "generator": "Unix Makefiles",
+      "generator": "Ninja",
       "inherits": ["cmake-dev", "vcpkg-dev"],
       "name": "linux"
     }

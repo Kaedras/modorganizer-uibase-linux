@@ -82,6 +82,10 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt install -y ninja-build
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
@@ -94,8 +98,7 @@ jobs:
 
       - name: Configure UI Base build
         run: |
-          cmake --preset linux \
-          "-DCMAKE_INSTALL_PREFIX=install" -DUIBASE_TESTING=ON
+          cmake --preset linux -DCMAKE_INSTALL_PREFIX=install -DUIBASE_TESTING=ON
 
       # build both Debug and RelWithDebInfo for package
       - name: Build UI Base

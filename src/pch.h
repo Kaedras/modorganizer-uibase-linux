@@ -59,7 +59,7 @@
 #include <ShlObj.h>
 #include <Windows.h>
 #include <shobjidl.h>
-#endif // _WIN32
+#endif  // _WIN32
 
 // Qt
 #include <QAbstractButton>

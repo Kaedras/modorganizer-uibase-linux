@@ -39,6 +39,10 @@ namespace fs = std::filesystem;
 namespace MOBase
 {
 
+std::string formatSystemMessage(int id){
+  return strerror(id);
+}
+
 enum spawnAction
 {
   spawn,
