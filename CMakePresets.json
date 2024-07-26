@@ -60,7 +60,7 @@
           "value": "x64-linux"
         }
       },
-      "generator": "Ninja",
+      "generator": "Ninja Multi-Config",
       "inherits": ["cmake-dev", "vcpkg-dev"],
       "name": "linux"
     }

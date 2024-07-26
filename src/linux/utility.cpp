@@ -39,7 +39,8 @@ namespace fs = std::filesystem;
 namespace MOBase
 {
 
-std::string formatSystemMessage(int id){
+std::string formatSystemMessage(int id)
+{
   return strerror(id);
 }
 

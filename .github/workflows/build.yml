@@ -84,7 +84,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt update && sudo apt install -y ninja-build
+          sudo apt update
+          sudo apt install -y build-essential cmake curl git ninja-build pkg-config tar unzip zip
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
@@ -119,7 +120,7 @@ jobs:
       # this tests that UI Base can be properly used as a CMake package
       - name: Test UI Base package
         run: |
-          cmake -B build . "-DCMAKE_PREFIX_PATH=..\..\install\lib\cmake\"
+          cmake -B build . -DCMAKE_PREFIX_PATH=../../install/lib/cmake/
           cmake --build build --config Debug
           cmake --build build --config Release
           cmake --build build --config RelWithDebInfo

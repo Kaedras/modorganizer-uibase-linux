@@ -421,7 +421,6 @@ public:  // Iterators:
     {
       return a.v != b.v;
     }
-    friend bool operator-(convert_iterator a, convert_iterator b) { return a.v - b.v; }
 
     reference operator*() const { return U(*v); }
     reference operator->() const { return U(*v); }

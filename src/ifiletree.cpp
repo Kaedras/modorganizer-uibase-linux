@@ -6,6 +6,16 @@
 // FileTreeEntry:
 namespace MOBase
 {
+template <class InputIt, class UnaryPred>
+constexpr InputIt FindIf(InputIt first, InputIt last, UnaryPred p)
+{
+  for (; first != last; ++first)
+    if (p(*first))
+      return first;
+
+  return last;
+}
+
 FileTreeEntry::FileTreeEntry(std::shared_ptr<const IFileTree> parent, QString name)
     : m_Parent(parent), m_Name(name)
 {}
@@ -697,8 +707,8 @@ std::shared_ptr<const FileTreeEntry> IFileTree::fetchEntry(QStringList const& pa
       tree = tree->parent().get();
     } else {
       // Find the entry at the current level:
-      auto entryIt = std::find_if(tree->begin(), tree->end(),
-                                  MatchEntryComparator{*it, IFileTree::DIRECTORY});
+      auto entryIt = FindIf(tree->begin(), tree->end(),
+                            MatchEntryComparator{*it, IFileTree::DIRECTORY});
 
       // Early exists if the entry does not exist or is not a directory:
       if (entryIt == tree->end()) {
@@ -715,7 +725,7 @@ std::shared_ptr<const FileTreeEntry> IFileTree::fetchEntry(QStringList const& pa
 
   // We have the final tree:
   auto entryIt =
-      std::find_if(tree->begin(), tree->end(), MatchEntryComparator{*it, matchTypes});
+      FindIf(tree->begin(), tree->end(), MatchEntryComparator{*it, matchTypes});
   auto bIt = tree->end();
   return entryIt == bIt ? nullptr : *entryIt;
 }
