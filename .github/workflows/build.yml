@@ -131,11 +131,11 @@ jobs:
         working-directory: install_windows
 
       - name: Create Linux UI Base archive
-        run: tar caf "uibase_${{ github.ref_name }}_linux.tar.zst" ./install
+        run: 7z a "uibase_${{ github.ref_name }}_linux.7z" ./install
         working-directory: install_linux
 
       - name: Publish Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release create --draft=false --notes="${{ github.ref_name }}" "${{ github.ref_name }}" ./install_windows/"uibase_${{ github.ref_name }}_windows.7z" ./install_linux/"uibase_${{ github.ref_name }}_linux.tar.zst"
+        run: gh release create --draft=false --notes="${{ github.ref_name }}" "${{ github.ref_name }}" ./install_windows/"uibase_${{ github.ref_name }}_windows.7z" ./install_linux/"uibase_${{ github.ref_name }}_linux.7z"
