@@ -137,4 +137,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release create --draft=false --notes="${{ github.ref_name }}" "${{ github.ref_name }}" ./install_windows/"uibase_${{ github.ref_name }}_windows.7z" ./install_linux/"uibase_${{ github.ref_name }}_linux.tar.gz"
+        run: gh release create --draft=false --notes="${{ github.ref_name }}" "${{ github.ref_name }}" ./install_windows/"uibase_${{ github.ref_name }}_windows.7z" ./install_linux/"uibase_${{ github.ref_name }}_linux.tar.zst"
