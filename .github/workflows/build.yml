@@ -127,11 +127,11 @@ jobs:
         working-directory: install_linux/install
 
       - name: Create Windows UI Base archive
-        run: 7z a "uibase_${{ github.ref_name }}_windows.7z" ./install
+        run: 7z a "uibase_${{ github.ref_name }}_windows.7z" ./install/*
         working-directory: install_windows
 
       - name: Create Linux UI Base archive
-        run: 7z a "uibase_${{ github.ref_name }}_linux.7z" ./install
+        run: 7z a "uibase_${{ github.ref_name }}_linux.7z" ./install/*
         working-directory: install_linux
 
       - name: Publish Release
