@@ -2,7 +2,7 @@ name: Build UIBase
 
 on:
   push:
-    branches: master
+    branches: [master, dev/vcpkg]
     tags:
       - "*"
   pull_request:
