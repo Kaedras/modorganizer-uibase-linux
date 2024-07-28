@@ -12,8 +12,25 @@ env:
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
 jobs:
-  build-windows:
-    runs-on: windows-2022
+  build:
+    strategy:
+      max-parallel: 2
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+        include:
+          - os: windows-latest
+            preset: vs2022-windows
+            build_dir: vsbuild
+            prefix_path: "-DCMAKE_PREFIX_PATH=${env:QT_ROOT_DIR}\\msvc2019_64"
+            test_prefix_path: "${env:QT_ROOT_DIR}\\msvc2019_64;..\\..\\install\\lib\\cmake\\"
+          - os: ubuntu-24.04
+            preset: linux
+            build_dir: linux-build
+            prefix_path: ""
+            test_prefix_path: ../../install/lib/cmake/
+            linux: 1
+
+    runs-on: ${{ matrix.os }}
     steps:
       # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
       - name: Export GitHub Actions cache environment variables
@@ -33,33 +50,41 @@ jobs:
       - uses: actions/checkout@v4
       - uses: lukka/run-vcpkg@v11
 
-      - name: Configure UI Base build
-        shell: pwsh
+      - if: ${{ matrix.linux }}
+        name: Run apt install
         run: |
-          cmake --preset vs2022-windows `
-            "-DCMAKE_PREFIX_PATH=${env:QT_ROOT_DIR}\msvc2019_64" `
+          sudo apt update
+          sudo apt install -y \
+          build-essential cmake curl git libegl1-mesa-dev libgl1-mesa-dev \
+          libglvnd-dev mesa-common-dev ninja-build pkg-config tar unzip zip
+
+      - name: Configure UI Base build
+        shell: bash
+        run: |
+          cmake --preset ${{ matrix.preset }} \
+            ${{ matrix.prefix_path }} \
             "-DCMAKE_INSTALL_PREFIX=install" -DUIBASE_TESTING=ON
 
       # build both Debug and RelWithDebInfo for package
       - name: Build UI Base
         run: |
-          cmake --build vsbuild --config Debug --target uibase-tests --verbose
-          cmake --build vsbuild --config RelWithDebInfo --target uibase-tests --verbose
+          cmake --build ${{ matrix.build_dir }} --config Debug --target uibase-tests --verbose
+          cmake --build ${{ matrix.build_dir }} --config RelWithDebInfo --target uibase-tests --verbose
 
       - name: Test UI Base
         run: |
-          ctest --test-dir vsbuild -C Debug --output-on-failure
-          ctest --test-dir vsbuild -C RelWithDebInfo --output-on-failure
+          ctest --test-dir ${{ matrix.build_dir }} -C Debug --output-on-failure
+          ctest --test-dir ${{ matrix.build_dir }} -C RelWithDebInfo --output-on-failure
 
       - name: Install UI Base
         run: |
-          cmake --install vsbuild --config Debug
-          cmake --install vsbuild --config RelWithDebInfo
+          cmake --install ${{ matrix.build_dir }} --config Debug
+          cmake --install ${{ matrix.build_dir }} --config RelWithDebInfo
 
       # this tests that UI Base can be properly used as a CMake package
       - name: Test UI Base package
         run: |
-          cmake -B build . "-DCMAKE_PREFIX_PATH=${env:QT_ROOT_DIR}\msvc2019_64;..\..\install\lib\cmake\"
+          cmake -B build . "-DCMAKE_PREFIX_PATH=${{ matrix.test_prefix_path }}"
           cmake --build build --config Debug
           cmake --build build --config Release
           cmake --build build --config RelWithDebInfo
@@ -68,89 +93,48 @@ jobs:
       - name: Upload UI Base artifact
         uses: actions/upload-artifact@master
         with:
-          name: uibase
+          name: uibase_${{ matrix.os }}
           path: ./install
-
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
-      - name: Export GitHub Actions cache environment variables
-        uses: actions/github-script@v7
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y build-essential cmake curl git ninja-build pkg-config tar unzip zip
-
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: 6.7.0
-          modules:
-          cache: true
-
-      - uses: actions/checkout@v4
-      - uses: lukka/run-vcpkg@v11
-
-      - name: Configure UI Base build
-        run: |
-          cmake --preset linux -DCMAKE_INSTALL_PREFIX=install -DUIBASE_TESTING=ON
-
-      # build both Debug and RelWithDebInfo for package
-      - name: Build UI Base
-        run: |
-          cmake --build linux-build --config Debug --target uibase-tests --verbose
-          cmake --build linux-build --config RelWithDebInfo --target uibase-tests --verbose
-
-      - name: Test UI Base
-        run: |
-          ctest --test-dir linux-build -C Debug --output-on-failure
-          ctest --test-dir linux-build -C RelWithDebInfo --output-on-failure
-
-      - name: Install UI Base
-        run: |
-          cmake --install linux-build --config Debug
-          cmake --install linux-build --config RelWithDebInfo
-
-      # this tests that UI Base can be properly used as a CMake package
-      - name: Test UI Base package
-        run: |
-          cmake -B build . -DCMAKE_PREFIX_PATH=../../install/lib/cmake/
-          cmake --build build --config Debug
-          cmake --build build --config Release
-          cmake --build build --config RelWithDebInfo
-        working-directory: tests/cmake
-
-      - name: Upload UI Base artifact
-        uses: actions/upload-artifact@master
-        with:
-          name: uibase
-          path: ./install
-
 
   publish:
     if: github.ref_type == 'tag'
-    needs: [build-windows, build-linux]
-    runs-on: windows-2022
+    needs: build
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - name: Download Artifact
+      - name: Download Windows Artifact
         uses: actions/download-artifact@master
         with:
-          name: uibase
-          path: ./install
+          name: uibase_windows-latest
+          path: ./install_windows/install
 
-      - name: Create UI Base archive
-        run: 7z a uibase_${{ github.ref_name }}.7z ./install/*
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@master
+        with:
+          name: uibase_ubuntu-24.04
+          path: ./install_linux/install
+
+      - name: Install elfutils
+        run: sudo apt update && sudo apt install -y elfutils
+
+      - name: Strip Linux libraries
+        run: |
+            mkdir -p debug
+            eu-strip --strip-debug -f debug/libuibase.so.debug lib/libuibase.so
+            eu-strip --strip-debug -f debug/libuibased.so.debug lib/libuibased.so
+        working-directory: install_linux/install
+
+      - name: Create Windows UI Base archive
+        run: 7z a "uibase_${{ github.ref_name }}_windows.7z" ./install
+        working-directory: install_windows
+
+      - name: Create Linux UI Base archive
+        run: tar caf "uibase_${{ github.ref_name }}_linux.tar.zst" ./install
+        working-directory: install_linux
 
       - name: Publish Release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release create --draft=false --notes="${{ github.ref_name }}" "${{ github.ref_name }}" ./uibase_${{ github.ref_name }}.7z
+        run: gh release create --draft=false --notes="${{ github.ref_name }}" "${{ github.ref_name }}" ./install_windows/"uibase_${{ github.ref_name }}_windows.7z" ./install_linux/"uibase_${{ github.ref_name }}_linux.tar.gz"

@@ -1,8 +1,14 @@
 cmake_minimum_required(VERSION 3.16)
+cmake_policy(SET CMP0111 NEW)
 
 include(CMakePackageConfigHelpers)
 
 project(uibase)
+
+if (UNIX)
+  include(FindOpenGL)
+  find_package(OpenGL REQUIRED COMPONENTS OpenGL)
+endif()
 
 find_package(mo2-cmake CONFIG REQUIRED)
 
